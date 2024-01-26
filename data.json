@@ -1,0 +1,23 @@
+[
+  {
+    "rodzaj": "Koncert",
+    "nazwaWydarzenia": "abb3",
+    "iloscBiletow": 0,
+    "cenaBiletu": "12",
+    "data": "2024-12-12"
+  },
+  {
+    "rodzaj": "Spektakl Teatralny",
+    "nazwaWydarzenia": "test2",
+    "iloscBiletow": "5",
+    "cenaBiletu": "99",
+    "data": "2222-01-01"
+  },
+  {
+    "rodzaj": "Wydarzenie Sportowe",
+    "nazwaWydarzenia": "test3",
+    "iloscBiletow": "1",
+    "cenaBiletu": "2",
+    "data": "2024-12-12"
+  }
+]

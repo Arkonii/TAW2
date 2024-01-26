@@ -1,55 +1,118 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-class MainView extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            selectedEvent: null,
-            numberOfTickets: 1,
-        };
-    }
+const MainView = () => {
+    const navigate = useNavigate();
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [numberOfTickets, setNumberOfTickets] = useState(1);
+    const [eventsData, setEventsData] = useState([]);
 
-    handleEventChange = (event) => {
-        this.setState({ selectedEvent: event.target.value });
+    useEffect(() => {
+        fetchEventData();
+    }, []);
+
+    const fetchEventData = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/getItems');
+            if (response.ok) {
+                const data = await response.json();
+                setEventsData(data);
+            } else {
+                console.error('Błąd podczas pobierania danych');
+            }
+        } catch (error) {
+            console.error('Wystąpił błąd:', error);
+        }
     };
 
-    handleTicketChange = (event) => {
-        this.setState({ numberOfTickets: parseInt(event.target.value, 10) });
+    const handleEventChange = (event) => {
+        setSelectedEvent(event.target.value);
     };
 
-    handleBuyTickets = () => {
-        const { selectedEvent, numberOfTickets } = this.state;
+    const handleTicketChange = (event) => {
+        setNumberOfTickets(parseInt(event.target.value, 10));
+    };
+    const updateExistingItems = async (updatedEventData) => {
+        try {
+            const response = await fetch('http://localhost:5000/api/updateExistingItems', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedEventData),
+            });
 
-        console.log(`Kupiono ${numberOfTickets} biletów na wydarzenie: ${selectedEvent}`);
+            if (!response.ok) {
+                throw new Error('Błąd podczas aktualizacji danych');
+            }
 
-        this.setState({ selectedEvent: null, numberOfTickets: 1 });
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Błąd podczas aktualizacji danych:', error);
+            throw error;
+        }
     };
 
-    render() {
-        const { selectedEvent, numberOfTickets } = this.state;
+    const handleBuyTickets = async (eventIndex) => {
+        try {
+            // Pobierz wydarzenie z bazy danych na podstawie indeksu
+            const selectedEvent = eventsData[eventIndex];
 
-        return (
-            <div>
-                <h2>Sklep Biletowy</h2>
-                <label>Wybierz wydarzenie:</label>
-                <select onChange={this.handleEventChange} value={selectedEvent}>
-                    <option value="koncert">Koncert</option>
-                    <option value="teatr">Spektakl Teatralny</option>
-                    <option value="sport">Wydarzenie Sportowe</option>
-                </select>
+            // Sprawdź, czy dostępna ilość biletów jest wystarczająca
+            if (selectedEvent.iloscBiletow < numberOfTickets) {
+                console.log('Brak wystarczającej ilości biletów');
+                return;
+            }
 
-                <label>Liczba biletów:</label>
-                <input
-                    type="number"
-                    min="1"
-                    value={numberOfTickets}
-                    onChange={this.handleTicketChange}
-                />
+            // Zaktualizuj stan dostępnych biletów na ekranie
+            const updatedEventsData = [...eventsData];
+            updatedEventsData[eventIndex].iloscBiletow -= numberOfTickets;
+            setEventsData(updatedEventsData);
 
-                <button onClick={this.handleBuyTickets}>Kup Bilety</button>
-            </div>
-        );
-    }
-}
+            // Zaktualizuj stan w bazie danych
+            await updateExistingItems({
+                id: selectedEvent.id,
+                numberOfTickets,
+            });
+
+            console.log(`Kupiono ${numberOfTickets} biletów na wydarzenie o indeksie: ${eventIndex}`);
+            // Resetuj stan po zakupie
+            setSelectedEvent(null);
+            setNumberOfTickets(1);
+        } catch (error) {
+            console.error('Błąd podczas zakupu biletów:', error);
+        }
+    };
+
+    const handleLoginClick = () => {
+        navigate('/login');
+    };
+
+    return (
+        <div>
+            <h2>Sklep Biletowy</h2>
+            {eventsData.map((event, index) => (
+                <div key={index}>
+                    <p>Rodzaj: {event.rodzaj}</p>
+                    <p>Nazwa wydarzenia: {event.nazwaWydarzenia}</p>
+                    <p>Ilość biletów: {event.iloscBiletow === 0 ? 'BRAK' : event.iloscBiletow}</p>
+                    <p>Cena biletu: {event.cenaBiletu} zł</p>
+                    <p>Data: {event.data}</p>
+
+                    <input
+                        type="number"
+                        value={numberOfTickets}
+                        onChange={handleTicketChange}
+                        min="1"
+                    />
+                    <button onClick={() => handleBuyTickets(index)}>Kup bilet/bilety</button>
+                    <hr />
+                </div>
+            ))}
+            <button onClick={handleLoginClick}>Zaloguj</button>
+        </div>
+    );
+};
 
 export default MainView;
